@@ -14,23 +14,11 @@
           http://www.springframework.org/schema/aop
           http://www.springframework.org/schema/aop/spring-aop.xsd">
 
-    <!-- 引入jdbc配置文件 -->
-    <!--<context:property-placeholder location="classpath:jdbc.properties" />-->
-    <!-- 配置进行解密  -->
-    <bean id="propertyConfigurer" class="com.zheng.common.plugin.EncryptPropertyPlaceholderConfigurer">
-        <property name="locations">
-            <list>
-                <value>classpath:jdbc.properties</value>
-                <value>classpath:redis.properties</value>
-            </list>
-        </property>
-    </bean>
-
     <!-- 主库数据源 -->
     <bean id="masterDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init"
           destroy-method="close">
         <!-- 基本属性 url、user、password -->
-        <property name="driverClassName" value="${master.jdbc.driver}"/>
+        <property name="driverClassName" value="${jdbc.driverClassName}"/>
         <property name="url" value="${master.jdbc.url}"/>
         <property name="username" value="${master.jdbc.username}"/>
         <property name="password" value="${master.jdbc.password}"/>
@@ -56,10 +44,10 @@
     <!-- 从库数据源 -->
     <bean id="slaveDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
         <!-- 基本属性 url、user、password -->
-        <property name="driverClassName" value="${slave.jdbc.driver}"/>
-        <property name="url" value="${slave.jdbc.url}"/>
-        <property name="username" value="${slave.jdbc.username}"/>
-        <property name="password" value="${slave.jdbc.password}"/>
+        <property name="driverClassName" value="${jdbc.driverClassName}"/>
+        <property name="url" value="${master.jdbc.url}"/>
+        <property name="username" value="${master.jdbc.username}"/>
+        <property name="password" value="${master.jdbc.password}"/>
         <!-- 配置初始化大小、最小、最大 -->
         <property name="initialSize" value="1"/>
         <property name="minIdle" value="1"/>
