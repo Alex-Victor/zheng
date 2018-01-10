@@ -37,8 +37,10 @@ public class MyRedisCache implements Cache {
         Objects.requireNonNull(key);
         byte[] bytes = this.shardedJedis.get(key.toString().getBytes());
         if(bytes != null && bytes.length > 0){
+            this.logger.info("get from cache...");
             return  new SimpleValueWrapper(RedisByteSerializer.toObject(bytes));
         }
+        this.logger.info("no data in cache, should from db");
         return null;
     }
 

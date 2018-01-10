@@ -8,7 +8,7 @@ import org.springframework.aop.MethodBeforeAdvice;
 import java.lang.reflect.Method;
 
 public class CacheExpireAdvice implements MethodBeforeAdvice, AfterReturningAdvice {
-    private Logger logger = LoggerFactory.getLogger(DataSourceAdvice.class);
+    private Logger logger = LoggerFactory.getLogger(CacheExpireAdvice.class);
     @Override
     public void before(Method method, Object[] args, Object target) throws Throwable {
         this.logger.info("CacheExpireAdvice before, target method:{}", method.getName());
