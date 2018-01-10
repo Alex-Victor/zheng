@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--为了避免jdk aop类内方法直接调用不走切面，这里固定使用cglib，或者设置mode="aspectj"都可以-->
+    <cache:annotation-driven proxy-target-class="true" order="10"/>
+    <!-- 切面逻辑 -->
+    <bean id="redisCacheAdvice" class="com.cache.config.CacheExpireAdvice"/>
+    <aop:config proxy-target-class="true">
+        <aop:pointcut id="cacheExpire" expression="execution(* com.cache.service.*.*(..)) and @annotation(com.cache.config.CacheExpire)"/>
+        <!-- 只有一个切入点和切入逻辑，用aop:advisor就好，如果有多个pointcut和advice，请用aop:aspect -->
+        <!-- 解析@CacheExpire的切面要在CacheInterceptor前面-->
+        <aop:advisor order="9" advice-ref="redisCacheAdvice" pointcut-ref="cacheExpire"/>
+    </aop:config>
+
+
+    <!-- 连接池配置 -->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <!-- 最大连接数 -->
+        <property name="maxTotal" value="30"/>
+        <!-- 最大空闲连接数 -->
+        <property name="maxIdle" value="10"/>
+        <!-- 每次释放连接的最大数目 -->
+        <property name="numTestsPerEvictionRun" value="1024"/>
+        <!-- 释放连接的扫描间隔（毫秒） -->
+        <property name="timeBetweenEvictionRunsMillis" value="30000"/>
+        <!-- 连接最小空闲时间 -->
+        <property name="minEvictableIdleTimeMillis" value="1800000"/>
+        <!-- 连接空闲多久后释放, 当空闲时间>该值 且 空闲连接>最大空闲连接数 时直接释放 -->
+        <property name="softMinEvictableIdleTimeMillis" value="10000"/>
+        <!-- 获取连接时的最大等待毫秒数,小于零:阻塞不确定的时间,默认-1 -->
+        <property name="maxWaitMillis" value="1500"/>
+        <!-- 在获取连接的时候检查有效性, 默认false -->
+        <property name="testOnBorrow" value="true"/>
+        <!-- 在空闲时检查有效性, 默认false -->
+        <property name="testWhileIdle" value="true"/>
+        <!-- 连接耗尽时是否阻塞, false报异常,ture阻塞直到超时, 默认true -->
+        <property name="blockWhenExhausted" value="false"/>
+    </bean>
+
+    <!-- jedis分片，也可以用jedis cluster -->
+    <bean id="shardedJedisPool" class="redis.clients.jedis.ShardedJedisPool">
+        <constructor-arg index="0" ref="jedisPoolConfig"/>
+        <constructor-arg index="1">
+            <list>
+                <bean class="redis.clients.jedis.JedisShardInfo">
+                    <constructor-arg name="host" value="192.168.1.20"/>
+                    <constructor-arg name="port" value="6379"/>
+                    <constructor-arg name="timeout" value="1000"/>
+                    <constructor-arg name="name" value="node1"/>
+                </bean>
+                <bean class="redis.clients.jedis.JedisShardInfo">
+                    <constructor-arg name="host" value="192.168.1.20"/>
+                    <constructor-arg name="port" value="6380"/>
+                    <constructor-arg name="timeout" value="1000"/>
+                    <constructor-arg name="name" value="node2"/>
+                </bean>
+            </list>
+        </constructor-arg>
+    </bean>
+    <bean class="com.cache.config.ShardedJedis" id="shardedJedis"/>
+    <bean id="redisCache" class="com.cache.config.MyRedisCache">
+        <property name="name" value="redis"/>
+    </bean>
+
+    <bean id="cacheManager" class="org.springframework.cache.support.SimpleCacheManager">
+        <property name="caches">
+            <set>
+                <ref bean="redisCache"/>
+            </set>
+        </property>
+    </bean>
+
+    <bean id="mockDao" class="com.cache.dao.MockDao"/>
+    <bean id="jedisCallbackTemplate" class="com.cache.config.CacheTemplate"/>
+
+</beans>
